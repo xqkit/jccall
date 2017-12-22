@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <!-- Cloud Setting  -->
+    <string name="cloud_setting_key_server">Server</string>
+    <string name="cloud_setting_key_display_name">DisplayName</string>
+    <string name="cloud_setting_key_call_max_num">CallMaxNum</string>
+    <string name="cloud_setting_key_call_audio_conference">CallAudioConference</string>
+    <string name="cloud_setting_call_audio_conference_title">Audio Conference Mode</string>
+    <string name="cloud_setting_call_audio_conference_summary">All calls are in an audio conference and can hear each other.</string>
+    <string name="cloud_setting_key_conference_max_num">ConferenceMaxNum</string>
+
+    <string name="cloud_setting_last_login_user_id">LastLoginUserId</string>
+    <string name="cloud_setting_last_login_password">LastLoginPassword</string>
+
+    <!-- Common -->
+    <string name="tip">Tip</string>
+    <string name="answer">Answer</string>
+    <string name="decline">Decline</string>
+    <string name="tip_answer_call">Answer Call?</string>
+</resources>

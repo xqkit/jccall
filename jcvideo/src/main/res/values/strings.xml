@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">视频通话</string>
     <!-- Cloud Setting  -->
     <string name="cloud_setting_key_server">Server</string>
     <string name="cloud_setting_key_display_name">DisplayName</string>
@@ -17,4 +17,7 @@
     <string name="answer">Answer</string>
     <string name="decline">Decline</string>
     <string name="tip_answer_call">Answer Call?</string>
+    <!-- Common -->
+    <string name="waiting_to_call">等待对方接受邀请…</string>
+    <string name="call_in_tip">邀请您视频聊天</string>
 </resources>

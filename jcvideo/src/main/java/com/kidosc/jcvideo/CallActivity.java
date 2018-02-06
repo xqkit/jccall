@@ -1,14 +1,29 @@
 package com.kidosc.jcvideo;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AlertDialog;
+import android.telephony.TelephonyManager;
+import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.juphoon.cloud.JCCall;
 import com.juphoon.cloud.JCCallItem;
@@ -17,8 +32,6 @@ import com.juphoon.cloud.JCMediaDeviceVideoCanvas;
 import com.kidosc.jcvideo.JCWrapper.JCCallUtils;
 import com.kidosc.jcvideo.JCWrapper.JCEvent.JCEvent;
 import com.kidosc.jcvideo.JCWrapper.JCManager;
-import com.kidosc.jcvideo.Toos.Utils;
-import com.kidosc.jcvideo.R;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -29,46 +42,99 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 
 /**
- * Desc:
+ * Desc:    发起通话
  * Email:   frank.xiong@kidosc.com
  * Date:    2017/12/21 18:38
  */
 
 public class CallActivity extends Activity {
 
+    private static final String TAG = CallActivity.class.getSimpleName();
     @BindView(R.id.layoutCall)
-    public ConstraintLayout mContentView;
-    @BindView(R.id.layoutAudioIn)
-    public View mAudioIn;
-    @BindView(R.id.layoutVideoIn)
-    public View mVideoIn;
-    @BindView(R.id.layoutVideoInCall)
-    public View mVideoInCall;
-    @BindView(R.id.txtUserId)
-    public TextView mTxtUserId;
-    @BindView(R.id.txtCallInfo)
-    public TextView mTxtCallInfo;
-    @BindView(R.id.txtNetStatus)
-    public TextView mTxtNetStatus;
+    public RelativeLayout mContentView;
+
+    @BindView(R.id.call_in_answercall)
+    public ImageView mCallInAnswer;
+    @BindView(R.id.call_in_endcall)
+    public ImageView mCallInEnd;
+    @BindView(R.id.call_in_name)
+    public TextView mCallInName;
+
+    @BindView(R.id.call_out_name)
+    public TextView mCallOutName;
+    @BindView(R.id.call_out_term)
+    public ImageView mCallOutTerm;
+
+    @BindView(R.id.rl_call_in)
+    public RelativeLayout mRlCallIn;
+    @BindView(R.id.rl_call_out)
+    public RelativeLayout mRlCallOut;
 
     private boolean mFullScreen;
     private JCMediaDeviceVideoCanvas mLocalCanvas;
     private JCMediaDeviceVideoCanvas mRemoteCanvas;
     private AlertDialog mAlertAnswer;
+    private ImageView mOnTerm;
+    private String mName;
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.call_page);
         ButterKnife.bind(this);
-        EventBus.getDefault().register(this);
-        JCManager.getInstance().call.call("a666aa", true);
+        Log.d(TAG, "onCreate");
+        initPermissions();
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        try {
+            String imei = telephonyManager.getImei();
+            EventBus.getDefault().register(this);
+            Log.d(TAG, "imei = " + imei);
+            boolean status = JCManager.getInstance().client.login("kido_" + imei + "_kido", imei);
+            if (!status) Log.e(TAG, "login fail!");
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+        }
+        Intent intent = getIntent();
+        String uid = intent.getStringExtra("contact_id");
+        mName = intent.getStringExtra("name");
+        Log.d(TAG, "uid = " + uid + ",name = " + mName);
+        mCallOutName.setText(mName);
+        mCallInName.setText(mName);
+        boolean flag = JCManager.getInstance().call.call("kido_" + uid + "_kido", true);
+        Log.d(TAG, flag ? "成功" : "失败");
+        if (!flag) {
+            Toast.makeText(this, "视频失败，对方未登陆", Toast.LENGTH_SHORT).show();
+        }
         updateUI();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void initPermissions() {
+        PackageManager pm = getPackageManager();
+        String packageName = getPackageName();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int resultR = pm.checkPermission(Manifest.permission.READ_EXTERNAL_STORAGE, packageName);
+            int resultW = pm.checkPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, packageName);
+            int resultC = pm.checkPermission(Manifest.permission.CAMERA, packageName);
+            int resultRa = pm.checkPermission(Manifest.permission.RECORD_AUDIO, packageName);
+            int resultP = pm.checkPermission(Manifest.permission.READ_PHONE_STATE, packageName);
+            int resultRc = pm.checkPermission(Manifest.permission.RECEIVE_BOOT_COMPLETED, packageName);
+            if (resultR == -1 || resultW == -1 || resultC == -1 || resultRa == -1 || resultP == -1 || resultRc == -1) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE
+                                , Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA
+                                , Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_PHONE_STATE
+                                , Manifest.permission.RECEIVE_BOOT_COMPLETED}
+                        , 1);
+            }
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         EventBus.getDefault().unregister(this);
         removeCanvas();
     }
@@ -83,34 +149,37 @@ public class CallActivity extends Activity {
     private void updateUI() {
         List<JCCallItem> callItems = JCManager.getInstance().call.getCallItems();
         if (callItems.size() == 0) {
-//            stopCallInfoTimer();
+            Log.e(TAG, "item is 0,will very soon finished");
             removeCanvas();
             finish();
         } else {
-//            startCallInfoTimer();
             JCCallItem item = JCCallUtils.getActiveCall();
             boolean singleCall = callItems.size() == 1;
-            mTxtUserId.setVisibility(singleCall ? View.VISIBLE : View.INVISIBLE);
-            mTxtCallInfo.setVisibility(singleCall ? View.VISIBLE : View.INVISIBLE);
-            mTxtNetStatus.setVisibility(singleCall ? View.VISIBLE : View.INVISIBLE);
-            if (singleCall) {
-                mTxtUserId.setText(item.getDisplayName());
-            }
             boolean needAnswer = item.getDirection() == JCCall.DIRECTION_IN && item.getState() == JCCall.STATE_PENDING;
             boolean video = item.getVideo();
-            mAudioIn.setVisibility(!video && needAnswer ? View.VISIBLE : View.INVISIBLE);
-            mVideoIn.setVisibility(video && needAnswer ? View.VISIBLE : View.INVISIBLE);
-            mVideoInCall.setVisibility(video && !needAnswer ? View.VISIBLE : View.INVISIBLE);
+            Log.d(TAG, "video " + video + " , needAnswer " + needAnswer);
+            mRlCallIn.setVisibility(video && needAnswer ? View.VISIBLE : View.INVISIBLE);
+            mRlCallOut.setVisibility(video && !needAnswer ? View.VISIBLE : View.INVISIBLE);
             if (video) {
                 dealCanvas(item);
-//                updateVideoInCallViews(item);
             } else {
                 removeCanvas();
-//                updateAudioInCallViews(item);
             }
             dealNeedAnswerCall();
         }
     }
+
+    /*@Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_POWER:
+                onTerm(mContentView);
+                break;
+            default:
+                break;
+        }
+        return super.onKeyDown(keyCode, event);
+    }*/
 
     private void dealNeedAnswerCall() {
         if (mAlertAnswer == null) {
@@ -143,12 +212,14 @@ public class CallActivity extends Activity {
         // 是否有视频窗口变化
         boolean change = false;
         if (mLocalCanvas == null && item.getUploadVideoStreamSelf()) {
+            Log.d(TAG, "mLocalCanvas == null ");
             mLocalCanvas = JCManager.getInstance().mediaDevice.startCameraVideo(JCMediaDevice.RENDER_FULL_SCREEN);
             mLocalCanvas.getVideoView().setZOrderMediaOverlay(true);
             mLocalCanvas.getVideoView().setId(View.generateViewId());
             mContentView.addView(mLocalCanvas.getVideoView(), 0);
             change = true;
         } else if (mLocalCanvas != null && !item.getUploadVideoStreamSelf()) {
+            Log.d(TAG, "mLocalCanvas != null ");
             JCManager.getInstance().mediaDevice.stopVideo(mLocalCanvas);
             mContentView.removeView(mLocalCanvas.getVideoView());
             mLocalCanvas = null;
@@ -156,12 +227,15 @@ public class CallActivity extends Activity {
         }
 
         if (item.getState() == JCCall.STATE_TALKING) {
+            Log.d(TAG, "STATE_TALKING ");
             if (mRemoteCanvas == null && item.getUploadVideoStreamOther()) {
+                Log.d(TAG, "mRemoteCanvas == null");
                 mRemoteCanvas = JCManager.getInstance().mediaDevice.startVideo(item.getRenderId(), JCMediaDevice.RENDER_FULL_SCREEN);
                 mRemoteCanvas.getVideoView().setId(View.generateViewId());
                 mContentView.addView(mRemoteCanvas.getVideoView(), 0);
                 change = true;
             } else if (mRemoteCanvas != null && !item.getUploadVideoStreamOther()) {
+                Log.d(TAG, "mRemoteCanvas != null");
                 JCManager.getInstance().mediaDevice.stopVideo(mRemoteCanvas);
                 mContentView.removeView(mRemoteCanvas.getVideoView());
                 mRemoteCanvas = null;
@@ -171,21 +245,40 @@ public class CallActivity extends Activity {
 
         // 处理视频窗口大小
         if (change) {
+            Log.d(TAG, "change");
             if (mLocalCanvas != null && mRemoteCanvas != null) {
                 mContentView.removeView(mLocalCanvas.getVideoView());
                 mContentView.removeView(mRemoteCanvas.getVideoView());
                 mContentView.addView(mRemoteCanvas.getVideoView());
-//                mContentView.addView(mRemoteCanvas.getVideoView(), 0);
-//                mContentView.addView(mLocalCanvas.getVideoView(), 1);
-//                ConstraintSet constraintSet = new ConstraintSet();
-//                constraintSet.clone(mContentView);
-//                constraintSet.constrainWidth(mLocalCanvas.getVideoView().getId(), Utils.dip2px(this, 80));
-//                constraintSet.constrainHeight(mLocalCanvas.getVideoView().getId(), Utils.dip2px(this, 120));
-//                constraintSet.connect(mLocalCanvas.getVideoView().getId(),
-//                        ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START, Utils.dip2px(this, 8));
-//                constraintSet.connect(mLocalCanvas.getVideoView().getId(),
-//                        ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, Utils.dip2px(this, 24));
-//                constraintSet.applyTo(mContentView);
+                View view = LayoutInflater.from(this).inflate(R.layout.on_call, null);
+                RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams
+                        (RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                layoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+                TextView mOnName = view.findViewById(R.id.call_on_name);
+                if (mName != null){
+                    mOnName.setText(mName);
+                }else{
+                    mOnName.setText(item.getDisplayName());
+                }
+                mOnTerm = view.findViewById(R.id.call_on_term);
+                mOnTerm.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mOnTerm.setImageAlpha(255);
+                        onTerm(v);
+                    }
+                });
+                mRlCallOut.setVisibility(View.INVISIBLE);
+                mRlCallIn.setVisibility(View.INVISIBLE);
+                mContentView.addView(view, layoutParams);
+                mContentView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        mOnTerm.setImageAlpha(255);
+                        mHandler.sendEmptyMessageDelayed(0, 3000);
+                    }
+                });
+                mHandler.sendEmptyMessageDelayed(0, 3000);
             } else if (mLocalCanvas != null) {
                 mContentView.removeView(mLocalCanvas.getVideoView());
                 mContentView.addView(mLocalCanvas.getVideoView(), 0,
@@ -197,6 +290,14 @@ public class CallActivity extends Activity {
             }
         }
     }
+
+    Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            mOnTerm.setImageAlpha(0);
+        }
+    };
 
     private void removeCanvas() {
         if (mLocalCanvas != null) {
@@ -210,34 +311,6 @@ public class CallActivity extends Activity {
             mRemoteCanvas = null;
         }
     }
-
-//    private void updateAudioInCallViews(JCCallItem item) {
-//        mBtnSpeakerAudio.setSelected(JCManager.getInstance().mediaDevice.isSpeakerOn());
-//        if (item.getState() == JCCall.STATE_TALKING) {
-//            mBtnMuteAudio.setEnabled(true);
-//            mBtnHoldAudio.setEnabled(!item.getHeld());
-//            mBtnHoldAudio.setSelected(item.getHold());
-//            mBtnMuteAudio.setSelected(item.getMute());
-//        } else {
-//            mBtnMuteAudio.setEnabled(false);
-//            mBtnHoldAudio.setEnabled(false);
-//        }
-//    }
-
-//    private void updateVideoInCallViews(JCCallItem item) {
-//        mBtnSpeakerVideo.setSelected(JCManager.getInstance().mediaDevice.isSpeakerOn());
-//        if (item.getState() == JCCall.STATE_TALKING) {
-//            mBtnCameraVideo.setEnabled(true);
-//            mBtnMuteVideo.setEnabled(true);
-//            mBtnMuteVideo.setSelected(item.getMute());
-//            mBtnCameraVideo.setSelected(item.getUploadVideoStreamSelf());
-//        } else {
-//            mBtnMuteVideo.setEnabled(false);
-//            mBtnHoldAudio.setEnabled(false);
-//            mBtnCameraVideo.setEnabled(false);
-//        }
-//    }
-
 
     public void onAudioAnswer(View view) {
         JCManager.getInstance().call.answer(JCCallUtils.getActiveCall(), false);
@@ -267,7 +340,7 @@ public class CallActivity extends Activity {
         JCManager.getInstance().call.enableUploadVideoStream(JCCallUtils.getActiveCall());
     }
 
-    public void onFullScreen(View view) {
+    /*public void onFullScreen(View view) {
         mFullScreen = !mFullScreen;
         switchFullScreen();
     }
@@ -277,19 +350,15 @@ public class CallActivity extends Activity {
         Utils.setActivityFullScreen(this, mFullScreen);
         JCCallItem item = JCCallUtils.getActiveCall();
         if (item != null && item.getVideo()) {
-            mTxtUserId.setVisibility(mFullScreen ? View.INVISIBLE : View.VISIBLE);
-            mTxtCallInfo.setVisibility(mFullScreen ? View.INVISIBLE : View.VISIBLE);
-            mTxtNetStatus.setVisibility(mFullScreen ? View.INVISIBLE : View.VISIBLE);
+            mCallOnName.setVisibility(mFullScreen ? View.INVISIBLE : View.VISIBLE);
             if (mFullScreen) {
-                mVideoIn.setVisibility(View.INVISIBLE);
-                mVideoInCall.setVisibility(View.INVISIBLE);
+                mRlCallIn.setVisibility(View.INVISIBLE);
             } else {
                 if (item.getDirection() == JCCall.DIRECTION_IN && (item.getState() < JCCall.STATE_CONNECTING || item.getState() > JCCall.STATE_OK)) {
-                    mVideoIn.setVisibility(View.VISIBLE);
+                    mRlCallIn.setVisibility(View.VISIBLE);
                 } else {
-                    mVideoInCall.setVisibility(View.VISIBLE);
                 }
             }
         }
-    }
+    }*/
 }

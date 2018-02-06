@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="160dp"
     android:layout_height="160dp"
-    tools:context="com.kidosc.myapplication.com.kidosc.jcvideo.MainActivity">
+    tools:context="com.kidosc.jcvideo.MainActivity">
 
     <Button
         android:layout_width="80dp"

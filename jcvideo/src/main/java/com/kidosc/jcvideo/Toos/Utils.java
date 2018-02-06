@@ -3,11 +3,16 @@ package com.kidosc.jcvideo.Toos;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 
 public class Utils {
 
@@ -62,6 +67,23 @@ public class Utils {
             }
         }
         return "";
+    }
+
+    /**
+     * 加载本地图片
+     *
+     * @param url
+     * @return
+     */
+    public static Bitmap getLoacalBitmap(String url) {
+        try {
+            FileInputStream fis = new FileInputStream(url);
+            ///把流转化为Bitmap图片
+            return BitmapFactory.decodeStream(fis);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
 }

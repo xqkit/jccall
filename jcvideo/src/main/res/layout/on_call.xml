@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="160dp"
+    android:layout_height="160dp">
+
+    <TextView
+        android:id="@+id/call_on_name"
+        android:layout_width="30dp"
+        android:layout_height="22.5dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:textColor="#000"
+        android:textSize="12sp" />
+
+    <ImageView
+        android:id="@+id/call_on_term"
+        android:layout_width="60dp"
+        android:layout_height="59.5dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="18dp"
+        android:onClick="onTerm"
+        android:src="@drawable/ic_endcall" />
+</RelativeLayout>
